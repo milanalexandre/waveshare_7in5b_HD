@@ -98,6 +98,7 @@ bool EPDDisplay::initialize()
     SendData(0x02);
 
     isInitialized = true;
+    isSleep = false;
     return true;
 }
 
@@ -111,9 +112,8 @@ void EPDDisplay::reset()
 
 void EPDDisplay::clear()
 {
-    if (!isInitialized)
+    if (!checkDisplayReady())
     {
-        Debug("EPD not initialized\r\n");
         return;
     }
 
@@ -129,9 +129,8 @@ void EPDDisplay::clear()
 
 void EPDDisplay::display()
 {
-    if (!isInitialized)
+    if (!checkDisplayReady())
     {
-        Debug("EPD not initialized\r\n");
         return;
     }
 
@@ -167,9 +166,46 @@ void EPDDisplay::display()
     Debug("display\r\n");
 }
 
+void EPDDisplay::sleep()
+{
+    if (!isInitialized || isSleep)
+    {
+        Debug("EPD not initialized or already in sleep mode\r\n");
+        return;
+    }
+
+    SendCommand(0x10);
+    SendData(0x01);
+    delay(100);
+    isSleep = true;
+    Debug("e-Paper enters sleep\r\n");
+}
+
+bool EPDDisplay::isInSleep()
+{
+    return isSleep;
+}
+
 /****************************
  * PRIVATE FUNCTIONS
  ****************************/
+
+bool EPDDisplay::checkDisplayReady()
+{
+    if (!isInitialized)
+    {
+        Debug("EPD not initialized\r\n");
+        return false;
+    }
+
+    if (isSleep)
+    {
+        Debug("EPD is in sleep mode\r\n");
+        return false;
+    }
+
+    return true;
+}
 
 void EPDDisplay::ClearRed()
 {

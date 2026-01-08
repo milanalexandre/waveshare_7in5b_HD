@@ -144,6 +144,17 @@ public:
      */
     void display();
 
+    /**
+     * @brief Put the display into sleep mode to save power
+     */
+    void sleep();
+
+    /**
+     * @brief Check if the display is currently in sleep mode
+     * @return true if display is in sleep mode, false otherwise
+     */
+    bool isInSleep();
+
     /** ***************************************
     BASIC FUNCTIONS
     *****************************************/
@@ -418,6 +429,7 @@ private:
     uint8_t *blackBuffer;
     uint8_t *redBuffer;
     bool isInitialized;
+    bool isSleep;
 
     uint16_t width;
     uint16_t height;
@@ -439,6 +451,12 @@ private:
     /*****************************************
     HARDWARE FUNCTIONS
     *****************************************/
+
+    /**
+     * @brief Check if display is ready for operations (initialized and not in sleep)
+     * @return true if ready, false otherwise (with debug message)
+     */
+    bool checkDisplayReady();
 
     /**
      * @brief Send command to EPD controller

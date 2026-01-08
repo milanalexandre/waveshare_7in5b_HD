@@ -10,6 +10,7 @@ EPDDisplay::EPDDisplay(
     int din_pin) : blackBuffer(NULL),
                    redBuffer(NULL),
                    isInitialized(false),
+                   isSleep(false),
                    width(EPD_7IN5B_HD_WIDTH),
                    height(EPD_7IN5B_HD_HEIGHT),
                    widthByte((EPD_7IN5B_HD_WIDTH % 8 == 0) ? (EPD_7IN5B_HD_WIDTH / 8) : (EPD_7IN5B_HD_WIDTH / 8 + 1)),
