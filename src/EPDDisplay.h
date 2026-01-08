@@ -155,6 +155,13 @@ public:
      */
     bool isInSleep();
 
+    /**
+     * @brief Wake up the display from sleep mode
+     * If display is in sleep, performs a reset to wake it up
+     * If not in sleep, does nothing
+     */
+    void wakeUp();
+
     /** ***************************************
     BASIC FUNCTIONS
     *****************************************/

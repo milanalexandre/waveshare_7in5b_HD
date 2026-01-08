@@ -107,6 +107,7 @@ void EPDDisplay::reset()
     digitalWrite(m_RST_pin, 0);
     delay(2);
     digitalWrite(m_RST_pin, 1);
+    isSleep = false;
     delay(200);
 }
 
@@ -184,6 +185,20 @@ void EPDDisplay::sleep()
 bool EPDDisplay::isInSleep()
 {
     return isSleep;
+}
+
+void EPDDisplay::wakeUp()
+{
+    if (isSleep)
+    {
+        Debug("Waking up e-Paper from sleep mode\r\n");
+        reset();
+        Debug("e-Paper wake up complete\r\n");
+    }
+    else
+    {
+        Debug("e-Paper is already awake\r\n");
+    }
 }
 
 /****************************
