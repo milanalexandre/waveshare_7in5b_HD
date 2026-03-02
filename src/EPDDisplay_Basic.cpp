@@ -1,3 +1,15 @@
+/**
+ * @file EPDDisplay_Basic.cpp
+ * @brief Fundamental drawing operations: pixel, fill, bitmap, rotation, mirroring.
+ *
+ * drawPixel() is the single write path for all drawing primitives.
+ * It applies rotation and mirror transforms before computing the buffer address,
+ * then sets bits in both blackBuffer and redBuffer according to the color.
+ *
+ * Buffer bit address formula (after transform):
+ *   Addr  = X / 8 + Y * widthByte   (widthByte = 110 for 880-px width)
+ *   Bit   = 0x80 >> (X % 8)         (MSB = leftmost pixel in the byte)
+ */
 #include "EPDDisplay.h"
 
 void EPDDisplay::drawPixel(uint16_t x, uint16_t y, COLOR color)
@@ -56,24 +68,31 @@ void EPDDisplay::drawPixel(uint16_t x, uint16_t y, COLOR color)
         return;
     }
 
+    // Compute byte address and bit mask within that byte (MSB = left pixel)
     uint32_t Addr = X / 8 + Y * widthByte;
+    uint8_t  bit  = 0x80 >> (X % 8);
 
+    // Write the two buffer planes according to the color.
+    // Color encoding:
+    //   WHITE:  blackBuf bit=1, redBuf bit=1
+    //   BLACK:  blackBuf bit=0, redBuf bit=1
+    //   RED:    blackBuf bit=1, redBuf bit=0
     switch (color)
     {
     case EPDDisplay::BLACK:
-        blackBuffer[Addr] = blackBuffer[Addr] & ~(0x80 >> (X % 8));
-        redBuffer[Addr] = redBuffer[Addr] | (0x80 >> (X % 8));
+        blackBuffer[Addr] &= ~bit; // Clear black-plane bit  → black pixel
+        redBuffer[Addr]   |=  bit; // Set   red-plane bit    → not red
         break;
     case EPDDisplay::RED:
-        blackBuffer[Addr] = blackBuffer[Addr] | (0x80 >> (X % 8));
-        redBuffer[Addr] = redBuffer[Addr] & ~(0x80 >> (X % 8));
+        blackBuffer[Addr] |=  bit; // Set   black-plane bit  → not black
+        redBuffer[Addr]   &= ~bit; // Clear red-plane bit    → red pixel
         break;
     case EPDDisplay::WHITE:
-        blackBuffer[Addr] = blackBuffer[Addr] | (0x80 >> (X % 8));
-        redBuffer[Addr] = redBuffer[Addr] | (0x80 >> (X % 8));
+        blackBuffer[Addr] |= bit;  // Set both planes → white pixel
+        redBuffer[Addr]   |= bit;
         break;
     case EPDDisplay::NULL_COLOR:
-        break;
+        break; // Transparent — leave pixel unchanged
     }
 }
 

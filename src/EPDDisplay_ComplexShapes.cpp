@@ -1,3 +1,26 @@
+/**
+ * @file EPDDisplay_ComplexShapes.cpp
+ * @brief Complex shapes: rounded rectangles, stars, triangles, ellipses, polygons.
+ *
+ * Algorithms used:
+ *
+ * drawRoundedRectangle — straight edges via drawLine + quarter-arc corners
+ *   using the Bresenham midpoint circle algorithm (same as drawCircle).
+ *
+ * drawStar — polygon with alternating outer/inner radius vertices.
+ *   Vertices are computed with sin/cos; filled by drawing center-to-edge lines.
+ *
+ * drawTriangle — outline via three drawLine calls; fill via scanline with
+ *   sorted vertices (selection sort on Y, then two-pass linear interpolation).
+ *
+ * drawEllipse — midpoint ellipse algorithm (two-region variant).
+ *   Region 1: while ry²·x ≤ rx²·y (shallow slope region)
+ *   Region 2: while y ≥ 0 (steep slope region)
+ *   Uses integer arithmetic with squared radii for accuracy.
+ *
+ * drawPolygon — outline via drawLine between consecutive vertices;
+ *   fill via scanline even-odd rule (ray casting along horizontal scanlines).
+ */
 #include "EPDDisplay.h"
 #include <cmath>
 
@@ -60,6 +83,9 @@ void EPDDisplay::drawStar(uint16_t x_center, uint16_t y_center, uint16_t radius_
   if (num_points > 10)
     num_points = 10;
 
+  // Each star point needs two vertices (outer tip + inner indentation).
+  // Total vertices = 2 * num_points, evenly spaced around the circle.
+  // Offset by -π/2 so the first outer tip points straight up (12 o'clock).
   float angle_step = 2.0 * M_PI / (2 * num_points);
   float start_angle = -M_PI / 2;
 
@@ -304,18 +330,24 @@ void EPDDisplay::drawPolygon(const uint16_t *points_x, const uint16_t *points_y,
         max_y = points_y[i];
     }
 
+    // Scanline even-odd fill:
+    // For each horizontal scanline Y, find all edges that cross it, compute
+    // their X intersections, sort them, then fill pairs (x0→x1, x2→x3, ...).
     for (uint16_t y = min_y; y <= max_y; y++)
     {
-      uint16_t intersections[20];
+      uint16_t intersections[20]; // max 20 intersections per scanline
       uint8_t intersection_count = 0;
 
       for (uint8_t i = 0; i < num_points; i++)
       {
         uint8_t next = (i + 1) % num_points;
 
+        // Check if this edge crosses the scanline Y (exclusive on one end
+        // to avoid double-counting shared vertices between adjacent edges).
         if ((points_y[i] <= y && points_y[next] > y) ||
             (points_y[i] > y && points_y[next] <= y))
         {
+          // Linear interpolation: x at scanline y along edge (i → next)
           uint16_t x_intersect = points_x[i] +
                                  ((y - points_y[i]) * (points_x[next] - points_x[i])) /
                                      (points_y[next] - points_y[i]);

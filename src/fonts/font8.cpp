@@ -1,3 +1,15 @@
+/**
+ * @file font8.cpp
+ * @brief Bitmap table for Font8 — 5×8 pixels per glyph.
+ *
+ * Encoding: 1 byte per row (5 pixels packed into bits 7–3, bits 2–0 unused).
+ * Each glyph occupies 8 consecutive bytes.
+ * Glyphs are stored in ASCII order from space (0x20) through tilde (0x7E).
+ * Total: 95 glyphs × 8 bytes = 760 bytes.
+ *
+ * Bit layout within each byte (MSB = leftmost pixel):
+ *   Byte: [p0][p1][p2][p3][p4][x][x][x]
+ */
 
 #include "../EPDDisplay.h"
 

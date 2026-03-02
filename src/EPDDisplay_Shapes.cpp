@@ -1,3 +1,23 @@
+/**
+ * @file EPDDisplay_Shapes.cpp
+ * @brief Simple shape primitives: circle, rectangle, line, point.
+ *
+ * Drawing algorithms used:
+ *
+ * drawCircle — Bresenham midpoint circle algorithm.
+ *   Starts at (0, R) and uses an error accumulator (Esp) to decide whether
+ *   to decrement Y on each step. Plots 8 symmetric octant points per
+ *   iteration, giving O(R) time complexity with integer arithmetic only.
+ *
+ * drawLine — Bresenham line algorithm.
+ *   Uses cumulative error (Esp = dx + dy) to step along the major axis and
+ *   conditionally step the minor axis when error exceeds the threshold.
+ *   Supports dotted style by counting drawn vs. skipped pixels.
+ *
+ * drawRectangle — Four drawLine calls (outline) or horizontal scan-fill.
+ *
+ * drawPoint — Square block of (2*width-1)² pixels centered on (x,y).
+ */
 #include "EPDDisplay.h"
 
 void EPDDisplay::drawCircle(uint16_t Xcenter, uint16_t Ycenter, uint16_t radius, COLOR color, uint8_t line_width, DRAW_FILL draw_fill)
@@ -8,11 +28,15 @@ void EPDDisplay::drawCircle(uint16_t Xcenter, uint16_t Ycenter, uint16_t radius,
         return;
     }
 
+    // Bresenham midpoint circle: start at top (0, R), iterate to the 45° point.
+    // Esp is the decision variable: Esp = 3 - 2*R initially.
+    //   Esp < 0: move to (x+1, y)     → Esp += 4*x + 6
+    //   Esp ≥ 0: move to (x+1, y-1)  → Esp += 4*(x-y) + 10, then y--
     int16_t Xcurrent, Ycurrent;
     Xcurrent = 0;
     Ycurrent = radius;
 
-    int16_t Esp = 3 - (radius << 1);
+    int16_t Esp = 3 - (radius << 1); // 3 - 2*R
 
     int16_t sCountY;
     if (draw_fill)
@@ -98,11 +122,14 @@ void EPDDisplay::drawLine(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint1
     int dx = (int)Xend - (int)Xstart >= 0 ? Xend - Xstart : Xstart - Xend;
     int dy = (int)Yend - (int)Ystart <= 0 ? Yend - Ystart : Ystart - Yend;
 
-    // Increment direction, 1 is positive, -1 is counter;
+    // Step directions: +1 toward end, -1 away from end
     int XAddway = Xstart < Xend ? 1 : -1;
     int YAddway = Ystart < Yend ? 1 : -1;
 
-    // Cumulative error
+    // Bresenham error accumulator.
+    // dx is always positive; dy is always ≤ 0 (negated above).
+    // When 2*Esp ≥ dy: advance X (major axis step).
+    // When 2*Esp ≤ dx: advance Y (minor axis step).
     int Esp = dx + dy;
     char Dotted_Len = 0;
 

@@ -1,3 +1,12 @@
+/**
+ * @file EPDDisplay.cpp
+ * @brief Constructor and destructor for the EPDDisplay class.
+ *
+ * Stores pin numbers and sets all member variables to their initial/default
+ * values. No GPIO configuration or SPI communication happens here — that is
+ * deferred to initialize() so the object can be created at global scope
+ * before the Arduino runtime is ready.
+ */
 #include "EPDDisplay.h"
 
 // Constructor with pin parameters
@@ -13,6 +22,8 @@ EPDDisplay::EPDDisplay(
                    isSleep(false),
                    width(EPD_7IN5B_HD_WIDTH),
                    height(EPD_7IN5B_HD_HEIGHT),
+                   // widthByte: bytes per row = ceil(width / 8).
+                   // For 880 px: 880 / 8 = 110 bytes exactly.
                    widthByte((EPD_7IN5B_HD_WIDTH % 8 == 0) ? (EPD_7IN5B_HD_WIDTH / 8) : (EPD_7IN5B_HD_WIDTH / 8 + 1)),
                    heightByte(EPD_7IN5B_HD_HEIGHT),
                    widthMemory(EPD_7IN5B_HD_WIDTH),   // 880

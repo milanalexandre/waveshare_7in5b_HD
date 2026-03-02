@@ -1,3 +1,12 @@
+/**
+ * @file font16.cpp
+ * @brief Bitmap table for Font16 — 11×16 pixels per glyph.
+ *
+ * Encoding: 2 bytes per row (11 pixels in bits 15–5 of the 16-bit span,
+ * packed as two consecutive bytes MSB-first; bits 4–0 of byte 1 unused).
+ * Each glyph occupies 32 bytes (16 rows × 2 bytes).
+ * Glyphs: ASCII 0x20–0x7E (95 characters). Total: 95 × 32 = 3,040 bytes.
+ */
 #include "../EPDDisplay.h"
 
 const uint8_t Font16_Table[] =

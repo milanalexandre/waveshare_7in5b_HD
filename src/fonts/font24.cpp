@@ -1,3 +1,12 @@
+/**
+ * @file font24.cpp
+ * @brief Bitmap table for Font24 — 17×24 pixels per glyph.
+ *
+ * Encoding: 3 bytes per row (17 pixels in bits 23–7 of the 24-bit span,
+ * packed MSB-first; bits 6–0 of byte 2 unused).
+ * Each glyph occupies 72 bytes (24 rows × 3 bytes).
+ * Glyphs: ASCII 0x20–0x7E (95 characters). Total: 95 × 72 = 6,840 bytes.
+ */
 
 #include "../EPDDisplay.h"
 

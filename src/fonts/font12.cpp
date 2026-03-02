@@ -1,3 +1,11 @@
+/**
+ * @file font12.cpp
+ * @brief Bitmap table for Font12 — 7×12 pixels per glyph.
+ *
+ * Encoding: 1 byte per row (7 pixels in bits 7–1, bit 0 unused).
+ * Each glyph occupies 12 consecutive bytes.
+ * Glyphs: ASCII 0x20–0x7E (95 characters). Total: 95 × 12 = 1,140 bytes.
+ */
 
 #include "../EPDDisplay.h"
 const uint8_t Font12_Table[] =

@@ -1,3 +1,12 @@
+/**
+ * @file font20.cpp
+ * @brief Bitmap table for Font20 — 14×20 pixels per glyph.
+ *
+ * Encoding: 2 bytes per row (14 pixels in bits 15–2 of the 16-bit span,
+ * packed MSB-first; bits 1–0 of byte 1 unused).
+ * Each glyph occupies 40 bytes (20 rows × 2 bytes).
+ * Glyphs: ASCII 0x20–0x7E (95 characters). Total: 95 × 40 = 3,800 bytes.
+ */
 #include "../EPDDisplay.h"
 
 const uint8_t Font20_Table[] =

@@ -1,8 +1,24 @@
+/**
+ * @file EPDDisplay_Clock.cpp
+ * @brief Clock widget implementations: analog face and 7-segment digital clock.
+ *
+ * drawAnalogClock:
+ *   All angles are measured from 12 o'clock (−90°) going clockwise.
+ *   Hand positions are computed with cos/sin in floating point and cast to
+ *   integer pixel coordinates. The hour hand incorporates the minute offset
+ *   so it moves smoothly between hour marks.
+ *
+ * drawDigitalClock7Segment:
+ *   Uses the standard 7-segment encoding (segments a–g, bits 0–6).
+ *   Each segment is rendered as a filled rectangle. The SEGMENT_PATTERNS
+ *   lookup table maps digits 0–9 to their active-segment bitmask.
+ */
 #include "EPDDisplay.h"
 #include <math.h>
 
-// Lookup table for segments of each digit (0-9)
-// Segments: a,b,c,d,e,f,g (bits 0-6)
+// 7-segment encoding: bit i=1 means segment i is active for that digit.
+// Segment order: a(0)=top, b(1)=top-right, c(2)=bottom-right,
+//                d(3)=bottom, e(4)=bottom-left, f(5)=top-left, g(6)=middle
 static const uint8_t SEGMENT_PATTERNS[10] = {
     0b00111111, // 0: a,b,c,d,e,f
     0b00000110, // 1: b,c

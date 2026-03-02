@@ -1,13 +1,31 @@
+/**
+ * @file EPDDisplay_Text.cpp
+ * @brief Text rendering: single characters, UTF-8 strings, numbers, floats, time.
+ *
+ * Character rendering model:
+ *   Each glyph in a font is stored as a packed 1-bit bitmap.
+ *   Layout: `height` rows, each row padded to whole bytes (MSB = leftmost pixel).
+ *   Bytes per glyph = height * ceil(width / 8).
+ *   ASCII glyphs start at space (0x20) and are stored consecutively through
+ *   tilde (0x7E), giving 95 characters total.
+ *
+ * Extended character support:
+ *   drawString() decodes UTF-8 on the fly and resolves non-ASCII codepoints
+ *   via a binary search in fontExtCodepoints[]. The matched index is used as
+ *   an offset into the per-font extended bitmap table (fontExtX_Table[]).
+ *   Unsupported codepoints fall back to rendering '?'.
+ */
 #include "EPDDisplay.h"
 
-// Extended character tables (defined in their respective font files)
+// Extended character tables (defined in src/fonts/font_ext.cpp — auto-generated)
 extern const uint8_t fontExt8_Table[];
 extern const uint8_t fontExt12_Table[];
 extern const uint8_t fontExt16_Table[];
 extern const uint8_t fontExt20_Table[];
 extern const uint8_t fontExt24_Table[];
 
-// Sorted Unicode codepoints for binary search
+// Sorted array of supported Unicode codepoints beyond ASCII.
+// Must remain sorted for binary search (fontExtLookup) to work correctly.
 static const uint32_t fontExtCodepoints[45] = {
     0x00A1U, 0x00B0U, 0x00B1U, 0x00BFU, 0x00C0U, 0x00C1U, 0x00C2U, 0x00C4U,
     0x00C7U, 0x00C8U, 0x00C9U, 0x00CAU, 0x00CBU, 0x00CDU, 0x00CEU, 0x00CFU,
@@ -17,16 +35,18 @@ static const uint32_t fontExtCodepoints[45] = {
     0x00FAU, 0x00FBU, 0x00FCU, 0x00FFU, 0x20ACU
 };
 
+// Binary search over fontExtCodepoints[].
+// Returns the 0-based index of `codepoint` if found, or -1 if not supported.
 static int16_t fontExtLookup(uint32_t codepoint)
 {
     int16_t lo = 0, hi = 44;
     while (lo <= hi) {
         int16_t mid = (lo + hi) >> 1;
         if (fontExtCodepoints[mid] == codepoint) return mid;
-        if (fontExtCodepoints[mid] < codepoint) lo = mid + 1;
-        else hi = mid - 1;
+        if (fontExtCodepoints[mid] < codepoint)  lo = mid + 1;
+        else                                      hi = mid - 1;
     }
-    return -1;
+    return -1; // Not found
 }
 
 void EPDDisplay::drawChar(uint16_t Xpoint, uint16_t Ypoint, const char Acsii_Char, sFONT *Font, COLOR color_foreground, COLOR color_background)
@@ -87,25 +107,35 @@ void EPDDisplay::drawString(uint16_t Xstart, uint16_t Ystart, const char *pStrin
     const uint8_t *s = (const uint8_t *)pString;
     while (*s != '\0')
     {
-        // Decode one UTF-8 codepoint
+        // ── UTF-8 decode one codepoint ──────────────────────────────────────
+        // UTF-8 encoding rules:
+        //   0xxxxxxx              → 1-byte sequence (ASCII, U+0000–U+007F)
+        //   110xxxxx 10xxxxxx     → 2-byte sequence (U+0080–U+07FF)
+        //   1110xxxx 10xxxxxx 10xxxxxx → 3-byte sequence (U+0800–U+FFFF)
+        //   4-byte sequences (emoji etc.) are not supported and are skipped.
         uint32_t cp;
         if (*s < 0x80)
         {
+            // 1-byte (ASCII)
             cp = *s++;
         }
         else if ((*s & 0xE0) == 0xC0 && s[1] != 0)
         {
+            // 2-byte: low 5 bits of first byte + low 6 bits of second byte
             cp = ((uint32_t)(s[0] & 0x1F) << 6) | (s[1] & 0x3F);
             s += 2;
         }
         else if ((*s & 0xF0) == 0xE0 && s[1] != 0 && s[2] != 0)
         {
-            cp = ((uint32_t)(s[0] & 0x0F) << 12) | ((uint32_t)(s[1] & 0x3F) << 6) | (s[2] & 0x3F);
+            // 3-byte: low 4 bits + two 6-bit continuation bytes
+            cp = ((uint32_t)(s[0] & 0x0F) << 12)
+               | ((uint32_t)(s[1] & 0x3F) << 6)
+               | (s[2] & 0x3F);
             s += 3;
         }
         else
         {
-            s++; // skip invalid / unsupported byte
+            s++; // Skip invalid or unsupported byte (4-byte sequences, malformed input)
             continue;
         }
 
