@@ -535,6 +535,26 @@ private:
      * @param color Color of the segment
      */
     void draw7Segment(uint16_t x, uint16_t y, uint8_t segment_type, uint16_t segment_width, uint16_t segment_height, COLOR color);
+
+    /*****************************************
+    UTF-8 / EXTENDED CHARACTER HELPERS
+    *****************************************/
+
+    /**
+     * @brief Draw a single Unicode codepoint (ASCII or extended table).
+     * Falls back to '?' for unsupported codepoints.
+     */
+    void drawCodepoint(uint16_t Xpoint, uint16_t Ypoint, uint32_t codepoint, sFONT *Font, COLOR color_foreground, COLOR color_background);
+
+    /**
+     * @brief Render a character from a raw bitmap pointer (inner loop of drawChar).
+     */
+    void drawCharBitmap(uint16_t Xpoint, uint16_t Ypoint, const uint8_t *ptr, sFONT *Font, COLOR color_foreground, COLOR color_background);
+
+    /**
+     * @brief Return the extended bitmap table for the given font, or nullptr if unknown.
+     */
+    const uint8_t *getExtTable(sFONT *Font);
 };
 
 #endif // __EPDDISPLAY_H

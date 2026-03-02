@@ -1,3 +1,5 @@
 .pio
 .vscode
 .DS_Store
+# Ignore IA files
+*CLAUDE.md

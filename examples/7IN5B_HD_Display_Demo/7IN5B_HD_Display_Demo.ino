@@ -2,7 +2,6 @@
 #include "EPDDisplay.h"
 #include "image.cpp"
 
-
 #define BUSY_pin 4
 #define RST_pin 16
 #define DC_pin 17
@@ -417,19 +416,16 @@ void testTextAndNumbers()
   display.drawString(50, 380, "Line 2 - extend over multiple", &EPDDisplay::Font12, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
   display.drawString(50, 400, "Line 3 - lines for demonstration", &EPDDisplay::Font12, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
 
-  // Special characters
-  display.drawString(50, 440, "Chars: !@#$%^&*()_+-=[]{}|;':\",./<>?", &EPDDisplay::Font12, EPDDisplay::RED, EPDDisplay::NULL_COLOR);
-}
+  // Special characters - ASCII punctuation and symbols
+  display.drawString(50, 412, "ASCII: !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~", &EPDDisplay::Font12, EPDDisplay::RED, EPDDisplay::NULL_COLOR);
 
-void testLargeBitmap()
-{
-  display.drawString(10, 40, "Large bitmap test - 440x440px", &EPDDisplay::Font16, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
-
-  display.drawString(50, 80, "Testing large bitmap rendering:", &EPDDisplay::Font12, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
-  display.drawString(50, 100, "Size: 440x440 pixels", &EPDDisplay::Font12, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
-
-  display.drawBitmap(220, 60, 440, 440, epd_bitmap_440x440_red, EPDDisplay::WHITE, EPDDisplay::RED);
-  display.drawBitmap(220, 60, 440, 440, epd_bitmap_440x440_black, EPDDisplay::NULL_COLOR, EPDDisplay::BLACK);
+  // Extended characters - Latin accents and special symbols
+  display.drawString(0, 424, "Accentués: àáâäçèéêëìíîïñòóôöùúûü ÀÁÂÄÇÈÉÊËÍÎÏÑÓÖÙÚÛÜß", &EPDDisplay::Font8, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
+  display.drawString(0, 432, "Accentués: àáâäçèéêëìíîïñòóôöùúûü ÀÁÂÄÇÈÉÊËÍÎÏÑÓÖÙÚÛÜß", &EPDDisplay::Font12, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
+  display.drawString(0, 444, "Accentués: àáâäçèéêëìíîïñòóôöùúûü ÀÁÂÄÇÈÉÊËÍÎÏÑÓÖÙÚÛÜß", &EPDDisplay::Font16, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
+  display.drawString(0, 460, "Accentués: àáâäçèéêëìíîïñòóôöùúûü ÀÁÂÄÇÈÉÊËÍÎÏÑÓÖÙÚÛÜß", &EPDDisplay::Font20, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
+  display.drawString(0, 480, "Accentués: àáâäçèéêëìíîïñòóôöùúûü ÀÁÂÄÇÈÉÊËÍÎÏÑÓÖ", &EPDDisplay::Font24, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
+  display.drawString(0, 504, "Symboles: ¡¿°±€", &EPDDisplay::Font12, EPDDisplay::RED, EPDDisplay::NULL_COLOR);
 }
 
 void testAnalogClock()
