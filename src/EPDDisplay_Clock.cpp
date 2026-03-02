@@ -40,24 +40,34 @@ void EPDDisplay::drawAnalogClock(uint16_t x_center, uint16_t y_center, uint16_t 
   // Draw the clock circle
   drawCircle(x_center, y_center, radius, color_face, 2, DRAW_EMPTY);
 
-  // Draw hour marks
+  // Draw hour marks and optional numbers
   for (int i = 0; i < 12; i++)
   {
-    float angle = (i * 30.0 - 90.0) * M_PI / 180.0; // -90° to start at 12 o'clock
-    uint16_t x1 = x_center + (radius - 10) * cos(angle);
-    uint16_t y1 = y_center + (radius - 10) * sin(angle);
-    uint16_t x2 = x_center + (radius - 5) * cos(angle);
-    uint16_t y2 = y_center + (radius - 5) * sin(angle);
+    float angle = (i * 30.0f - 90.0f) * (float)M_PI / 180.0f;
+    int16_t r_outer = (int16_t)radius - 10;
+    int16_t r_inner = (int16_t)radius - 5;
 
-    drawLine(x1, y1, x2, y2, color_face, 2, LINE_SOLID);
+    if (r_outer > 0 && r_inner > 0)
+    {
+      int16_t x1 = (int16_t)x_center + (int16_t)(r_outer * cosf(angle));
+      int16_t y1 = (int16_t)y_center + (int16_t)(r_outer * sinf(angle));
+      int16_t x2 = (int16_t)x_center + (int16_t)(r_inner * cosf(angle));
+      int16_t y2 = (int16_t)y_center + (int16_t)(r_inner * sinf(angle));
+      if (x1 >= 0 && y1 >= 0 && x2 >= 0 && y2 >= 0)
+        drawLine((uint16_t)x1, (uint16_t)y1, (uint16_t)x2, (uint16_t)y2, color_face, 2, LINE_SOLID);
+    }
 
-    // Draw numbers if requested
     if (show_numbers)
     {
-      uint16_t num_x = x_center + (radius - 25) * cos(angle) - 6;
-      uint16_t num_y = y_center + (radius - 25) * sin(angle) - 8;
-      int hour_num = (i == 0) ? 12 : i;
-      drawNumber(num_x, num_y, hour_num, &Font16, color_numbers, NULL_COLOR);
+      int16_t r_num = (int16_t)radius - 25;
+      if (r_num > 0)
+      {
+        int16_t num_x = (int16_t)x_center + (int16_t)(r_num * cosf(angle)) - 6;
+        int16_t num_y = (int16_t)y_center + (int16_t)(r_num * sinf(angle)) - 8;
+        int hour_num = (i == 0) ? 12 : i;
+        if (num_x >= 0 && num_y >= 0)
+          drawNumber((uint16_t)num_x, (uint16_t)num_y, hour_num, &Font16, color_numbers, NULL_COLOR);
+      }
     }
   }
 
@@ -66,10 +76,15 @@ void EPDDisplay::drawAnalogClock(uint16_t x_center, uint16_t y_center, uint16_t 
   {
     if (i % 5 != 0) // Skip hour marks
     {
-      float angle = (i * 6.0 - 90.0) * M_PI / 180.0;
-      uint16_t x1 = x_center + (radius - 8) * cos(angle);
-      uint16_t y1 = y_center + (radius - 8) * sin(angle);
-      drawPoint(x1, y1, color_face, 1);
+      float angle = (i * 6.0f - 90.0f) * (float)M_PI / 180.0f;
+      int16_t r_min = (int16_t)radius - 8;
+      if (r_min > 0)
+      {
+        int16_t x1 = (int16_t)x_center + (int16_t)(r_min * cosf(angle));
+        int16_t y1 = (int16_t)y_center + (int16_t)(r_min * sinf(angle));
+        if (x1 >= 0 && y1 >= 0)
+          drawPoint((uint16_t)x1, (uint16_t)y1, color_face, 1);
+      }
     }
   }
 
@@ -77,29 +92,32 @@ void EPDDisplay::drawAnalogClock(uint16_t x_center, uint16_t y_center, uint16_t 
   uint8_t hour_12 = hour % 12;
 
   // Calculate hand angles
-  float hour_angle = ((hour_12 * 30.0) + (minute * 0.5) - 90.0) * M_PI / 180.0;
-  float minute_angle = ((minute * 6.0) - 90.0) * M_PI / 180.0;
-  float second_angle = ((second * 6.0) - 90.0) * M_PI / 180.0;
+  float hour_angle   = ((hour_12 * 30.0f) + (minute * 0.5f) - 90.0f) * (float)M_PI / 180.0f;
+  float minute_angle = ((minute * 6.0f) - 90.0f) * (float)M_PI / 180.0f;
+  float second_angle = ((second * 6.0f) - 90.0f) * (float)M_PI / 180.0f;
 
   // Draw hour hand (shortest and thickest)
-  uint16_t hour_length = radius * 0.5;
-  uint16_t hour_x = x_center + hour_length * cos(hour_angle);
-  uint16_t hour_y = y_center + hour_length * sin(hour_angle);
-  drawLine(x_center, y_center, hour_x, hour_y, color_hands, 3, LINE_SOLID);
+  float hour_length = radius * 0.5f;
+  int16_t hour_x = (int16_t)x_center + (int16_t)(hour_length * cosf(hour_angle));
+  int16_t hour_y = (int16_t)y_center + (int16_t)(hour_length * sinf(hour_angle));
+  if (hour_x >= 0 && hour_y >= 0)
+    drawLine(x_center, y_center, (uint16_t)hour_x, (uint16_t)hour_y, color_hands, 3, LINE_SOLID);
 
   // Draw minute hand (longer and less thick)
-  uint16_t minute_length = radius * 0.7;
-  uint16_t minute_x = x_center + minute_length * cos(minute_angle);
-  uint16_t minute_y = y_center + minute_length * sin(minute_angle);
-  drawLine(x_center, y_center, minute_x, minute_y, color_hands, 2, LINE_SOLID);
+  float minute_length = radius * 0.7f;
+  int16_t minute_x = (int16_t)x_center + (int16_t)(minute_length * cosf(minute_angle));
+  int16_t minute_y = (int16_t)y_center + (int16_t)(minute_length * sinf(minute_angle));
+  if (minute_x >= 0 && minute_y >= 0)
+    drawLine(x_center, y_center, (uint16_t)minute_x, (uint16_t)minute_y, color_hands, 2, LINE_SOLID);
 
   // Draw second hand if requested (longest and thinnest)
   if (show_seconds)
   {
-    uint16_t second_length = radius * 0.8;
-    uint16_t second_x = x_center + second_length * cos(second_angle);
-    uint16_t second_y = y_center + second_length * sin(second_angle);
-    drawLine(x_center, y_center, second_x, second_y, RED, 1, LINE_SOLID);
+    float second_length = radius * 0.8f;
+    int16_t second_x = (int16_t)x_center + (int16_t)(second_length * cosf(second_angle));
+    int16_t second_y = (int16_t)y_center + (int16_t)(second_length * sinf(second_angle));
+    if (second_x >= 0 && second_y >= 0)
+      drawLine(x_center, y_center, (uint16_t)second_x, (uint16_t)second_y, RED, 1, LINE_SOLID);
   }
 
   // Draw clock center

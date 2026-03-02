@@ -22,7 +22,7 @@
 
 void EPDDisplay::drawCircle(uint16_t Xcenter, uint16_t Ycenter, uint16_t radius, COLOR color, uint8_t line_width, DRAW_FILL draw_fill)
 {
-    if (Xcenter > width || Ycenter >= height)
+    if (Xcenter > width || Ycenter > height)
     {
         Debug("Paint_DrawCircle Input exceeds the normal display range\r\n");
         return;
@@ -119,8 +119,8 @@ void EPDDisplay::drawLine(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint1
 
     uint16_t Xpoint = Xstart;
     uint16_t Ypoint = Ystart;
-    int dx = (int)Xend - (int)Xstart >= 0 ? Xend - Xstart : Xstart - Xend;
-    int dy = (int)Yend - (int)Ystart <= 0 ? Yend - Ystart : Ystart - Yend;
+    int dx = abs((int)Xend - (int)Xstart);
+    int dy = -abs((int)Yend - (int)Ystart);
 
     // Step directions: +1 toward end, -1 away from end
     int XAddway = Xstart < Xend ? 1 : -1;
@@ -131,7 +131,7 @@ void EPDDisplay::drawLine(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint1
     // When 2*Esp ≥ dy: advance X (major axis step).
     // When 2*Esp ≤ dx: advance Y (minor axis step).
     int Esp = dx + dy;
-    char Dotted_Len = 0;
+    uint16_t Dotted_Len = 0;
 
     for (;;)
     {
@@ -198,10 +198,12 @@ void EPDDisplay::drawPoint(uint16_t Xpoint, uint16_t Ypoint, COLOR color, uint8_
 
     for (XDir_Num = 0; XDir_Num < 2 * point_width - 1; XDir_Num++)
     {
+        if ((int16_t)Xpoint + XDir_Num - point_width < 0)
+            continue;
         for (YDir_Num = 0; YDir_Num < 2 * point_width - 1; YDir_Num++)
         {
-            if (Xpoint + XDir_Num - point_width < 0 || Ypoint + YDir_Num - point_width < 0)
-                break;
+            if ((int16_t)Ypoint + YDir_Num - point_width < 0)
+                continue;
             drawPixel(Xpoint + XDir_Num - point_width, Ypoint + YDir_Num - point_width, color);
         }
     }

@@ -428,6 +428,17 @@ void testTextAndNumbers()
   display.drawString(0, 504, "Symboles: ¡¿°±€", &EPDDisplay::Font12, EPDDisplay::RED, EPDDisplay::NULL_COLOR);
 }
 
+void testLargeBitmap()
+{
+  display.drawString(10, 40, "Large bitmap test - 440x440px", &EPDDisplay::Font16, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
+
+  display.drawString(50, 80, "Testing large bitmap rendering:", &EPDDisplay::Font12, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
+  display.drawString(50, 100, "Size: 440x440 pixels", &EPDDisplay::Font12, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);
+
+  display.drawBitmap(220, 60, 440, 440, epd_bitmap_440x440_red, EPDDisplay::WHITE, EPDDisplay::RED);
+  display.drawBitmap(220, 60, 440, 440, epd_bitmap_440x440_black, EPDDisplay::NULL_COLOR, EPDDisplay::BLACK);
+}
+
 void testAnalogClock()
 {
   display.drawString(10, 40, "Analog Clock", &EPDDisplay::Font20, EPDDisplay::BLACK, EPDDisplay::NULL_COLOR);

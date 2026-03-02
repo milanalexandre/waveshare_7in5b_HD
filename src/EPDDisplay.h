@@ -503,15 +503,11 @@ private:
     void ClearBlack();
 
     /**
-     * @brief Draw an arc corner for rounded rectangles
-     * @param x_center X coordinate of arc center
-     * @param y_center Y coordinate of arc center
-     * @param radius Radius of the arc
-     * @param corner Corner to draw (bitfield: 1=top-right, 2=top-left, 4=bottom-right, 8=bottom-left)
-     * @param color Color of the arc
-     * @param line_width Width of the arc line
+     * @brief Send the full hardware initialization command sequence to the controller.
+     * Called by initialize() and wakeUp(). Extracted so that wakeUp() can
+     * re-apply all settings after a reset without re-allocating buffers.
      */
-    void drawArcCorner(uint16_t x_center, uint16_t y_center, uint16_t radius, uint8_t corner, COLOR color, uint8_t line_width);
+    void hwInit();
 
     /**
      * @brief Draw a single 7-segment digit

@@ -32,65 +32,40 @@ static const uint32_t fontExtCodepoints[45] = {
     0x00D1U, 0x00D3U, 0x00D6U, 0x00D9U, 0x00DAU, 0x00DBU, 0x00DCU, 0x00DFU,
     0x00E0U, 0x00E1U, 0x00E2U, 0x00E4U, 0x00E7U, 0x00E8U, 0x00E9U, 0x00EAU,
     0x00EBU, 0x00EDU, 0x00EEU, 0x00EFU, 0x00F1U, 0x00F3U, 0x00F6U, 0x00F9U,
-    0x00FAU, 0x00FBU, 0x00FCU, 0x00FFU, 0x20ACU
-};
+    0x00FAU, 0x00FBU, 0x00FCU, 0x00FFU, 0x20ACU};
 
 // Binary search over fontExtCodepoints[].
 // Returns the 0-based index of `codepoint` if found, or -1 if not supported.
 static int16_t fontExtLookup(uint32_t codepoint)
 {
     int16_t lo = 0, hi = 44;
-    while (lo <= hi) {
+    while (lo <= hi)
+    {
         int16_t mid = (lo + hi) >> 1;
-        if (fontExtCodepoints[mid] == codepoint) return mid;
-        if (fontExtCodepoints[mid] < codepoint)  lo = mid + 1;
-        else                                      hi = mid - 1;
+        if (fontExtCodepoints[mid] == codepoint)
+            return mid;
+        if (fontExtCodepoints[mid] < codepoint)
+            lo = mid + 1;
+        else
+            hi = mid - 1;
     }
     return -1; // Not found
 }
 
 void EPDDisplay::drawChar(uint16_t Xpoint, uint16_t Ypoint, const char Acsii_Char, sFONT *Font, COLOR color_foreground, COLOR color_background)
 {
-    uint16_t Page, Column;
-
-    if (Xpoint > width || Ypoint > height)
+    if (Xpoint >= width || Ypoint >= height)
     {
         Debug("Paint_DrawChar Input exceeds the normal display range\r\n");
         return;
     }
 
-    // Get the offset address of the character in the font table
-    uint32_t Char_Offset = (Acsii_Char - ' ') * Font->height * (Font->width / 8 + (Font->width % 8 ? 1 : 0));
-    const unsigned char *ptr = &Font->table[Char_Offset];
+    uint8_t ch = (uint8_t)Acsii_Char;
+    if (ch < 0x20 || ch > 0x7E)
+        ch = '?';
 
-    for (Page = 0; Page < Font->height; Page++)
-    {
-        for (Column = 0; Column < Font->width; Column++)
-        {
-            // To determine whether the font background color and screen background color is consistent
-            if (EPDDisplay::NULL_COLOR == color_background)
-            { // this process is to speed up the scan
-                if (*ptr & (0x80 >> (Column % 8)))
-                    drawPixel(Xpoint + Column, Ypoint + Page, color_foreground);
-            }
-            else
-            {
-                if (*ptr & (0x80 >> (Column % 8)))
-                {
-                    drawPixel(Xpoint + Column, Ypoint + Page, color_foreground);
-                }
-                else
-                {
-                    drawPixel(Xpoint + Column, Ypoint + Page, color_background);
-                }
-            }
-            // One pixel is 8 bits
-            if (Column % 8 == 7)
-                ptr++;
-        }
-        if (Font->width % 8 != 0)
-            ptr++;
-    }
+    uint16_t bpc = Font->height * (Font->width / 8 + (Font->width % 8 ? 1 : 0));
+    drawCharBitmap(Xpoint, Ypoint, &Font->table[(ch - ' ') * bpc], Font, color_foreground, color_background);
 }
 
 void EPDDisplay::drawString(uint16_t Xstart, uint16_t Ystart, const char *pString, sFONT *Font, COLOR color_foreground, COLOR color_background)
@@ -98,7 +73,7 @@ void EPDDisplay::drawString(uint16_t Xstart, uint16_t Ystart, const char *pStrin
     uint16_t Xpoint = Xstart;
     uint16_t Ypoint = Ystart;
 
-    if (Xstart > width || Ystart > height)
+    if (Xstart >= width || Ystart >= height)
     {
         Debug("drawString Input exceeds the normal display range\r\n");
         return;
@@ -128,9 +103,7 @@ void EPDDisplay::drawString(uint16_t Xstart, uint16_t Ystart, const char *pStrin
         else if ((*s & 0xF0) == 0xE0 && s[1] != 0 && s[2] != 0)
         {
             // 3-byte: low 4 bits + two 6-bit continuation bytes
-            cp = ((uint32_t)(s[0] & 0x0F) << 12)
-               | ((uint32_t)(s[1] & 0x3F) << 6)
-               | (s[2] & 0x3F);
+            cp = ((uint32_t)(s[0] & 0x0F) << 12) | ((uint32_t)(s[1] & 0x3F) << 6) | (s[2] & 0x3F);
             s += 3;
         }
         else
@@ -146,10 +119,7 @@ void EPDDisplay::drawString(uint16_t Xstart, uint16_t Ystart, const char *pStrin
         }
 
         if ((Ypoint + Font->height) > height)
-        {
-            Xpoint = Xstart;
-            Ypoint = Ystart;
-        }
+            break;
 
         drawCodepoint(Xpoint, Ypoint, cp, Font, color_foreground, color_background);
         Xpoint += Font->width;
@@ -188,11 +158,16 @@ void EPDDisplay::drawCharBitmap(uint16_t Xpoint, uint16_t Ypoint, const uint8_t 
 
 const uint8_t *EPDDisplay::getExtTable(sFONT *Font)
 {
-    if (Font == &Font8)  return fontExt8_Table;
-    if (Font == &Font12) return fontExt12_Table;
-    if (Font == &Font16) return fontExt16_Table;
-    if (Font == &Font20) return fontExt20_Table;
-    if (Font == &Font24) return fontExt24_Table;
+    if (Font == &Font8)
+        return fontExt8_Table;
+    if (Font == &Font12)
+        return fontExt12_Table;
+    if (Font == &Font16)
+        return fontExt16_Table;
+    if (Font == &Font20)
+        return fontExt20_Table;
+    if (Font == &Font24)
+        return fontExt24_Table;
     return nullptr;
 }
 
@@ -229,71 +204,54 @@ void EPDDisplay::drawCodepoint(uint16_t Xpoint, uint16_t Ypoint, uint32_t codepo
 
 void EPDDisplay::drawNumber(uint16_t Xpoint, uint16_t Ypoint, int32_t number, sFONT *Font, COLOR color_foreground, COLOR color_background)
 {
-    if (Xpoint > width || Ypoint > height)
+    if (Xpoint >= width || Ypoint >= height)
     {
         Debug("Paint_DisNum Input exceeds the normal display range\r\n");
         return;
     }
 
     int16_t Num_Bit = 0, Str_Bit = 0;
-    uint8_t Str_Array[255] = {0}, Num_Array[255] = {0};
-    uint8_t *pStr = Str_Array;
+    uint8_t Str_Array[16] = {0}, Num_Array[16] = {0};
 
-    bool negative = false;
-    // Converts a number to a string
-    // negative
-    if (number < 0)
-    {
-        negative = true;
-        number = -number;
-    }
-    // number == 0
-    Num_Array[Num_Bit] = number % 10 + '0';
-    Num_Bit++;
-    number /= 10;
+    bool negative = (number < 0);
 
-    while (number)
+    uint32_t uvalue = negative
+                          ? (uint32_t)(-(number + 1)) + 1U
+                          : (uint32_t)number;
+
+    Num_Array[Num_Bit++] = (uint8_t)(uvalue % 10) + '0';
+    uvalue /= 10;
+    while (uvalue && Num_Bit < 11)
     {
-        Num_Array[Num_Bit] = number % 10 + '0';
-        Num_Bit++;
-        number /= 10;
+        Num_Array[Num_Bit++] = (uint8_t)(uvalue % 10) + '0';
+        uvalue /= 10;
     }
 
-    if (negative)
-    {
-        Num_Array[Num_Bit] = '-';
-        Num_Bit++;
-    }
+    if (negative && Num_Bit < 13)
+        Num_Array[Num_Bit++] = '-';
 
-    // The string is inverted
+    // Reverse into Str_Array
     while (Num_Bit > 0)
     {
-        Str_Array[Str_Bit] = Num_Array[Num_Bit - 1];
-        Str_Bit++;
-        Num_Bit--;
+        Str_Array[Str_Bit++] = Num_Array[--Num_Bit];
     }
 
-    // show
-    drawString(Xpoint, Ypoint, (const char *)pStr, Font, color_foreground, color_background);
+    drawString(Xpoint, Ypoint, (const char *)Str_Array, Font, color_foreground, color_background);
 }
 
 void EPDDisplay::drawFloat(uint16_t Xpoint, uint16_t Ypoint, float Number, sFONT *Font, COLOR color_foreground, COLOR color_background)
 {
-    if (Xpoint > width || Ypoint > height)
+    if (Xpoint >= width || Ypoint >= height)
     {
         Debug("Paint_DrawFloat Input exceeds the normal display range\r\n");
         return;
     }
 
-    int16_t Str_Bit = 0;
-    uint8_t Str_Array[255] = {0};
-    uint8_t *pStr = Str_Array;
+    uint8_t Str_Array[32] = {0};
 
-    // Converts a float number to a string
-    sprintf((char *)Str_Array, "%.2f", Number);
+    snprintf((char *)Str_Array, sizeof(Str_Array), "%.2f", Number);
 
-    // Show
-    drawString(Xpoint, Ypoint, (const char *)pStr, Font, color_foreground, color_background);
+    drawString(Xpoint, Ypoint, (const char *)Str_Array, Font, color_foreground, color_background);
 }
 
 void EPDDisplay::drawTime(uint16_t Xstart, uint16_t Ystart, uint8_t hour, uint8_t minute, uint8_t second, sFONT *Font, COLOR color_foreground, COLOR color_background)

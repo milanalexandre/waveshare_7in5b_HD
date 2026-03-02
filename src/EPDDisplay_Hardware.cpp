@@ -20,52 +20,11 @@
  */
 #include "EPDDisplay.h"
 
-bool EPDDisplay::initialize()
+// ── Private: sends the full controller init sequence ─────────────────────────
+// Separated from initialize() so that wakeUp() can re-apply all settings
+// after a hardware reset without re-allocating buffers.
+void EPDDisplay::hwInit()
 {
-    // Initialization of transformation variables
-    rotate = EPDDisplay::ROTATE_0;
-    mirror = EPDDisplay::MIRROR_NONE;
-
-    if (isInitialized)
-    {
-        return true;
-    }
-
-    // Init buffers
-    uint16_t imageSize = widthByte * heightByte;
-
-    blackBuffer = (uint8_t *)malloc(imageSize);
-    if (blackBuffer == NULL)
-    {
-        Debug("Failed to allocate memory for black buffer\r\n");
-        return false;
-    }
-
-    redBuffer = (uint8_t *)malloc(imageSize);
-    if (redBuffer == NULL)
-    {
-        free(blackBuffer);
-        blackBuffer = NULL;
-        Debug("Failed to allocate memory for black buffer\r\n");
-        return false;
-    }
-
-    // init pins
-    pinMode(m_BUSY_pin, INPUT);
-    pinMode(m_RST_pin, OUTPUT);
-    pinMode(m_DC_pin, OUTPUT);
-    pinMode(m_CLK_pin, OUTPUT);
-    pinMode(m_DIN_pin, OUTPUT);
-    pinMode(m_CS_pin, OUTPUT);
-    digitalWrite(m_CS_pin, HIGH);
-    digitalWrite(m_CLK_pin, LOW);
-
-    reset();
-
-    // ── EPD controller initialization sequence ──────────────────────────────
-    // Commands follow the UC8179 / SSD1677 controller protocol used by
-    // the Waveshare 7.5" B HD display.
-
     SendCommand(0x12); // Software Reset (SWRESET) — restores all registers to defaults
     ReadBusy();        // Wait until the controller finishes its internal reset
 
@@ -80,7 +39,6 @@ bool EPDDisplay::initialize()
     ReadBusy();
 
     // Booster Soft Start (0x0C): configures the charge pump phases A/B/C/D.
-    // Values are controller-specific; use the Waveshare reference values.
     SendCommand(0x0C);
     SendData(0xAE); // Phase A
     SendData(0xC7); // Phase B
@@ -88,54 +46,94 @@ bool EPDDisplay::initialize()
     SendData(0xC0); // Phase D
     SendData(0x40);
 
-    // Driver Output Control (0x01): sets MUX = 0x02AF = 687 → 528 gate lines
-    // (0-indexed: lines 0..527; 0x02AF = 527 + 1 in the register encoding)
+    // Driver Output Control (0x01): sets MUX = 0x02AF → 528 gate lines (0-indexed 0..527)
     SendCommand(0x01);
     SendData(0xAF); // MUX low byte
     SendData(0x02); // MUX high byte
-    SendData(0x01); // Gate scanning order: GD=0, SM=0, TB=1 (top-to-bottom)
+    SendData(0x01); // Gate scanning: top-to-bottom
 
-    // Data Entry Mode (0x11): Y-increment, X-increment — address counter advances
-    // left-to-right within each row, then row-by-row top-to-bottom.
+    // Data Entry Mode (0x11): X-increment then Y-increment (left-to-right, top-to-bottom)
     SendCommand(0x11);
     SendData(0x01);
 
-    // Set RAM X address window: columns 0x0000 to 0x036F (0–879 = 880 columns)
+    // Set RAM X address window: columns 0x0000 to 0x036F (0–879)
     SendCommand(0x44);
     SendData(0x00); // X start low byte
     SendData(0x00); // X start high byte
     SendData(0x6F); // X end low byte  (0x036F = 879)
     SendData(0x03); // X end high byte
-    // Set RAM Y address window: rows 0x02AF down to 0x0000 (527–0 = 528 rows)
-    // The controller counts rows from the bottom; writing top-to-bottom requires
-    // starting at the highest Y address.
+
+    // Set RAM Y address window: rows 0x02AF down to 0x0000 (527–0)
     SendCommand(0x45);
     SendData(0xAF); // Y start low byte  (0x02AF = 527)
     SendData(0x02); // Y start high byte
-    SendData(0x00); // Y end low byte    (0x0000 = 0)
+    SendData(0x00); // Y end low byte    (0)
     SendData(0x00); // Y end high byte
 
-    // Border Waveform Control (0x3C): sets the border pixel to white (LUT1)
+    // Border Waveform Control: border pixel = white (LUT1)
     SendCommand(0x3C);
     SendData(0x01);
 
-    // Temperature Sensor Control (0x18): use internal temperature sensor (0x80)
+    // Temperature sensor: use internal sensor
     SendCommand(0x18);
     SendData(0x80);
-    // Display Update Control 2 (0x22): 0xB1 = Load Temperature + Load waveform LUT
+    // Load temperature + waveform LUT, then activate
     SendCommand(0x22);
     SendData(0xB1);
-    // Master Activation (0x20): execute the sequence selected by 0x22
     SendCommand(0x20);
     ReadBusy(); // Wait for LUT load to complete
 
-    // Set initial RAM address counters to top-left of the window
-    SendCommand(0x4E); // Set RAM X address counter
+    // Set initial RAM address counters to top-left of window
+    SendCommand(0x4E); // X address counter = 0
     SendData(0x00);
     SendData(0x00);
-    SendCommand(0x4F); // Set RAM Y address counter to row 527 (top of display)
+    SendCommand(0x4F); // Y address counter = 527 (top of display)
     SendData(0xAF);
     SendData(0x02);
+}
+
+bool EPDDisplay::initialize()
+{
+    // Reset transform state on every call
+    rotate = EPDDisplay::ROTATE_0;
+    mirror = EPDDisplay::MIRROR_NONE;
+
+    if (isInitialized)
+    {
+        return true;
+    }
+
+    // Allocate framebuffers — use uint32_t to avoid uint8_t × uint16_t truncation
+    uint32_t imageSize = (uint32_t)widthByte * heightByte;
+
+    blackBuffer = (uint8_t *)malloc(imageSize);
+    if (blackBuffer == NULL)
+    {
+        Debug("Failed to allocate memory for black buffer\r\n");
+        return false;
+    }
+
+    redBuffer = (uint8_t *)malloc(imageSize);
+    if (redBuffer == NULL)
+    {
+        free(blackBuffer);
+        blackBuffer = NULL;
+        Debug("Failed to allocate memory for red buffer\r\n");
+        return false;
+    }
+
+    // Configure GPIO pins
+    pinMode(m_BUSY_pin, INPUT);
+    pinMode(m_RST_pin, OUTPUT);
+    pinMode(m_DC_pin, OUTPUT);
+    pinMode(m_CLK_pin, OUTPUT);
+    pinMode(m_DIN_pin, OUTPUT);
+    pinMode(m_CS_pin, OUTPUT);
+    digitalWrite(m_CS_pin, HIGH);
+    digitalWrite(m_CLK_pin, LOW);
+
+    reset();
+    hwInit();
 
     isInitialized = true;
     isSleep = false;
@@ -157,6 +155,10 @@ void EPDDisplay::clear()
     {
         return;
     }
+
+    uint32_t imageSize = (uint32_t)widthByte * heightByte;
+    memset(blackBuffer, 0xFF, imageSize);
+    memset(redBuffer, 0xFF, imageSize);
 
     ClearRed();
     ClearBlack();
@@ -245,6 +247,7 @@ void EPDDisplay::wakeUp()
     {
         Debug("Waking up e-Paper from sleep mode\r\n");
         reset();
+        hwInit();
         Debug("e-Paper wake up complete\r\n");
     }
     else
@@ -300,7 +303,7 @@ void EPDDisplay::ClearBlack()
     SendCommand(0x4F);
     SendData(0xAf);
     SendData(0x02);
-    SendCommand(0x24); // BLOCK
+    SendCommand(0x24);
     for (j = 0; j < heightByte; j++)
     {
         for (i = 0; i < widthByte; i++)
@@ -331,16 +334,22 @@ void EPDDisplay::ReadBusy()
     uint8_t busy;
     Debug("e-Paper busy\r\n");
     // The BUSY pin is LOW while the controller is processing and HIGH when idle.
-    // Poll until it goes HIGH.
+    // Poll until it goes HIGH, with a 30 s watchdog to avoid hanging on hardware fault.
+    uint32_t start = millis();
     do
     {
         busy = digitalRead(m_BUSY_pin);
+        if (millis() - start > 30000)
+        {
+            Debug("e-Paper BUSY timeout!\r\n");
+            break;
+        }
     } while (busy);
     Debug("e-Paper busy release\r\n");
     delay(200); // Additional settling time after BUSY clears
 }
 
-#define GPIO_PIN_SET   1
+#define GPIO_PIN_SET 1
 #define GPIO_PIN_RESET 0
 
 /**

@@ -33,6 +33,41 @@ void EPDDisplay::drawRoundedRectangle(uint16_t Xstart, uint16_t Ystart, uint16_t
     return;
   }
 
+  if (draw_fill == DRAW_FULL)
+  {
+    // Fill the horizontal middle band (straight sides)
+    for (uint16_t y = Ystart + radius; y <= Yend - radius; y++)
+      drawLine(Xstart, y, Xend, y, color, 1, LINE_SOLID);
+
+    // Fill the top and bottom curved bands using circle scanline logic.
+    // We reuse the Bresenham midpoint circle to find the horizontal extents.
+    int16_t XCurrent = 0, YCurrent = (int16_t)radius;
+    int16_t Esp = 3 - ((int16_t)radius << 1);
+    while (XCurrent <= YCurrent)
+    {
+      // Top arc: row = Ystart + radius - YCurrent .. Ystart + radius - XCurrent
+      drawLine(Xstart + radius - XCurrent, Ystart + radius - YCurrent,
+               Xend - radius + XCurrent, Ystart + radius - YCurrent, color, 1, LINE_SOLID);
+      drawLine(Xstart + radius - YCurrent, Ystart + radius - XCurrent,
+               Xend - radius + YCurrent, Ystart + radius - XCurrent, color, 1, LINE_SOLID);
+      // Bottom arc
+      drawLine(Xstart + radius - XCurrent, Yend - radius + YCurrent,
+               Xend - radius + XCurrent, Yend - radius + YCurrent, color, 1, LINE_SOLID);
+      drawLine(Xstart + radius - YCurrent, Yend - radius + XCurrent,
+               Xend - radius + YCurrent, Yend - radius + XCurrent, color, 1, LINE_SOLID);
+
+      if (Esp < 0)
+        Esp += 4 * XCurrent + 6;
+      else
+      {
+        Esp += 10 + 4 * (XCurrent - YCurrent);
+        YCurrent--;
+      }
+      XCurrent++;
+    }
+    return;
+  }
+
   drawLine(Xstart + radius, Ystart, Xend - radius, Ystart, color, line_width, line_style);
   drawLine(Xstart, Ystart + radius, Xstart, Yend - radius, color, line_width, line_style);
   drawLine(Xend, Yend - radius, Xend, Ystart + radius, color, line_width, line_style);
@@ -101,31 +136,8 @@ void EPDDisplay::drawStar(uint16_t x_center, uint16_t y_center, uint16_t radius_
     points_y[i] = y_center + (int16_t)(radius * sin(angle));
   }
 
-  if (draw_fill)
-  {
-    for (uint8_t i = 0; i < total_points; i++)
-    {
-      uint8_t next = (i + 1) % total_points;
-
-      int16_t steps = max(abs((int16_t)points_x[next] - (int16_t)points_x[i]),
-                          abs((int16_t)points_y[next] - (int16_t)points_y[i]));
-
-      for (int16_t step = 0; step <= steps; step++)
-      {
-        uint16_t x = points_x[i] + ((points_x[next] - points_x[i]) * step) / steps;
-        uint16_t y = points_y[i] + ((points_y[next] - points_y[i]) * step) / steps;
-        drawLine(x_center, y_center, x, y, color, 1, LINE_SOLID);
-      }
-    }
-  }
-  else
-  {
-    for (uint8_t i = 0; i < total_points; i++)
-    {
-      uint8_t next = (i + 1) % total_points;
-      drawLine(points_x[i], points_y[i], points_x[next], points_y[next], color, line_width, LINE_SOLID);
-    }
-  }
+  drawPolygon(points_x, points_y, total_points, color, line_width,
+              draw_fill ? EPDDisplay::DRAW_FULL : EPDDisplay::DRAW_EMPTY);
 }
 
 void EPDDisplay::drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, COLOR color, uint8_t line_width, DRAW_FILL draw_fill)
@@ -170,15 +182,15 @@ void EPDDisplay::drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2
     {
       if (y2 != y1)
       {
-        uint16_t xa = x1 + ((x2 - x1) * (y - y1)) / (y2 - y1);
-        uint16_t xb = x1 + ((x3 - x1) * (y - y1)) / (y3 - y1);
+        int32_t xa = (int32_t)x1 + ((int32_t)(x2 - x1) * (y - y1)) / (y2 - y1);
+        int32_t xb = (int32_t)x1 + ((int32_t)(x3 - x1) * (y - y1)) / (y3 - y1);
         if (xa > xb)
         {
-          uint16_t temp = xa;
+          int32_t temp = xa;
           xa = xb;
           xb = temp;
         }
-        drawLine(xa, y, xb, y, color, line_width, LINE_SOLID);
+        drawLine((uint16_t)xa, y, (uint16_t)xb, y, color, line_width, LINE_SOLID);
       }
     }
 
@@ -186,15 +198,15 @@ void EPDDisplay::drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2
     {
       if (y3 != y2)
       {
-        uint16_t xa = x2 + ((x3 - x2) * (y - y2)) / (y3 - y2);
-        uint16_t xb = x1 + ((x3 - x1) * (y - y1)) / (y3 - y1);
+        int32_t xa = (int32_t)x2 + ((int32_t)(x3 - x2) * (y - y2)) / (y3 - y2);
+        int32_t xb = (int32_t)x1 + ((int32_t)(x3 - x1) * (y - y1)) / (y3 - y1);
         if (xa > xb)
         {
-          uint16_t temp = xa;
+          int32_t temp = xa;
           xa = xb;
           xb = temp;
         }
-        drawLine(xa, y, xb, y, color, line_width, LINE_SOLID);
+        drawLine((uint16_t)xa, y, (uint16_t)xb, y, color, line_width, LINE_SOLID);
       }
     }
   }
@@ -335,7 +347,7 @@ void EPDDisplay::drawPolygon(const uint16_t *points_x, const uint16_t *points_y,
     // their X intersections, sort them, then fill pairs (x0→x1, x2→x3, ...).
     for (uint16_t y = min_y; y <= max_y; y++)
     {
-      uint16_t intersections[20]; // max 20 intersections per scanline
+      int32_t intersections[20];
       uint8_t intersection_count = 0;
 
       for (uint8_t i = 0; i < num_points; i++)
@@ -347,14 +359,13 @@ void EPDDisplay::drawPolygon(const uint16_t *points_x, const uint16_t *points_y,
         if ((points_y[i] <= y && points_y[next] > y) ||
             (points_y[i] > y && points_y[next] <= y))
         {
-          // Linear interpolation: x at scanline y along edge (i → next)
-          uint16_t x_intersect = points_x[i] +
-                                 ((y - points_y[i]) * (points_x[next] - points_x[i])) /
-                                     (points_y[next] - points_y[i]);
+          int32_t x_intersect = (int32_t)points_x[i] +
+                                ((int32_t)(y - points_y[i]) * (int32_t)(points_x[next] - points_x[i])) /
+                                    (int32_t)(points_y[next] - points_y[i]);
 
           if (intersection_count < 20)
           {
-            intersections[intersection_count++] = x_intersect;
+            intersections[intersection_count++] = (int32_t)x_intersect;
           }
         }
       }
@@ -365,7 +376,7 @@ void EPDDisplay::drawPolygon(const uint16_t *points_x, const uint16_t *points_y,
         {
           if (intersections[i] > intersections[j])
           {
-            uint16_t temp = intersections[i];
+            int32_t temp = intersections[i];
             intersections[i] = intersections[j];
             intersections[j] = temp;
           }
@@ -376,7 +387,7 @@ void EPDDisplay::drawPolygon(const uint16_t *points_x, const uint16_t *points_y,
       {
         if (i + 1 < intersection_count)
         {
-          drawLine(intersections[i], y, intersections[i + 1], y, color, line_width, LINE_SOLID);
+          drawLine((uint16_t)intersections[i], y, (uint16_t)intersections[i + 1], y, color, line_width, LINE_SOLID);
         }
       }
     }

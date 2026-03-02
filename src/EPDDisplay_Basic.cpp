@@ -129,7 +129,7 @@ void EPDDisplay::setRotation(uint8_t rotate)
     if (
         rotate == EPDDisplay::ROTATE_0 || rotate == EPDDisplay::ROTATE_90 || rotate == EPDDisplay::ROTATE_180 || rotate == EPDDisplay::ROTATE_270)
     {
-        rotate = rotate;
+        this->rotate = rotate;
     }
     else
     {
@@ -142,7 +142,7 @@ void EPDDisplay::setMirror(uint8_t mirror)
     if (mirror == EPDDisplay::MIRROR_NONE || mirror == EPDDisplay::MIRROR_HORIZONTAL ||
         mirror == EPDDisplay::MIRROR_VERTICAL || mirror == EPDDisplay::MIRROR_ORIGIN)
     {
-        mirror = mirror;
+        this->mirror = mirror;
     }
     else
     {
