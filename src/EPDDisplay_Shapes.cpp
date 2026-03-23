@@ -188,23 +188,24 @@ void EPDDisplay::drawLine(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint1
 
 void EPDDisplay::drawPoint(uint16_t Xpoint, uint16_t Ypoint, COLOR color, uint8_t point_width)
 {
-    if ((Xpoint + point_width) > width || (Ypoint + point_width) > height)
+    if ((Xpoint + point_width - 1) > width || (Ypoint + point_width - 1) > height)
     {
         Debug("drawPoint Input exceeds the normal display range\r\n");
         return;
     }
 
     int16_t XDir_Num, YDir_Num;
+    int16_t offset = (int16_t)(point_width - 1);
 
     for (XDir_Num = 0; XDir_Num < 2 * point_width - 1; XDir_Num++)
     {
-        if ((int16_t)Xpoint + XDir_Num - point_width < 0)
+        if ((int16_t)Xpoint + XDir_Num - offset < 0)
             continue;
         for (YDir_Num = 0; YDir_Num < 2 * point_width - 1; YDir_Num++)
         {
-            if ((int16_t)Ypoint + YDir_Num - point_width < 0)
+            if ((int16_t)Ypoint + YDir_Num - offset < 0)
                 continue;
-            drawPixel(Xpoint + XDir_Num - point_width, Ypoint + YDir_Num - point_width, color);
+            drawPixel(Xpoint + XDir_Num - offset, Ypoint + YDir_Num - offset, color);
         }
     }
 }
